@@ -46,6 +46,14 @@ def parse(text: str) -> Query:
     elif "жалоб" in t or "репорт" in t:
         metric = "reports"
 
+    #"Какое общее количество лайков/просмотров/комментариев/жалоб набрали все видео?"
+    if metric is not None and (
+        "общее количество" in t
+        or ("в сумме" in t and ("набрал" in t or "набрали" in t))
+        or ("суммарн" in t)
+    ):
+        return Query(kind="sum_final_all", metric=metric)
+
     #"Сколько всего видео есть в системе?"
     if re.search(r"сколько\s+всего\s+видео", t):
         return Query(kind="count_all_videos")

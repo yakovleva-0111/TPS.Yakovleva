@@ -18,6 +18,10 @@ METRIC_TO_DELTA = {
 def build(q: Query) -> tuple[str, tuple]:
     if q.kind == "count_all_videos":
         return "SELECT COUNT(*) FROM videos;", ()
+    
+    if q.kind == "sum_final_all":
+        col = METRIC_TO_FINAL[q.metric or "views"]
+        return (f"SELECT COALESCE(SUM({col}), 0) FROM videos;", ())
 
     if q.kind == "count_videos_by_creator_between":
         return (
