@@ -71,6 +71,7 @@ def parse(text: str) -> Query:
             else:
                 end = datetime(year, month + 1, 1, 0, 0, 0, tzinfo=timezone.utc)
             return Query(kind="count_videos_between", start=start, end=end)
+        
 
     #"Сколько видео у креатора с id ... вышло с ... по ... включительно?"
     m = re.search(r"креатор[а-я]*\s+с\s+id\s+([0-9a-f\-]{8,})", t)
