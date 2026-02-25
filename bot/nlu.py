@@ -57,6 +57,20 @@ def parse(text: str) -> Query:
     #"Сколько всего видео есть в системе?"
     if re.search(r"сколько\s+всего\s+видео", t):
         return Query(kind="count_all_videos")
+    
+    #"Сколько видео появилось на платформе за май 2025"
+    m = re.search(r"за\s+([а-яё]+)\s+(\d{4})", t)
+    if "сколько" in t and "видео" in t and m:
+        month_name = m.group(1)
+        year = int(m.group(2))
+        if month_name in MONTHS:
+            month = MONTHS[month_name]
+            start = datetime(year, month, 1, 0, 0, 0, tzinfo=timezone.utc)
+            if month == 12:
+                end = datetime(year + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+            else:
+                end = datetime(year, month + 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+            return Query(kind="count_videos_between", start=start, end=end)
 
     #"Сколько видео у креатора с id ... вышло с ... по ... включительно?"
     m = re.search(r"креатор[а-я]*\s+с\s+id\s+([0-9a-f\-]{8,})", t)

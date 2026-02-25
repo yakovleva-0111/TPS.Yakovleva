@@ -28,6 +28,12 @@ def build(q: Query) -> tuple[str, tuple]:
             "SELECT COUNT(*) FROM videos WHERE creator_id=$1 AND video_created_at >= $2 AND video_created_at < $3;",
             (q.creator_id, q.start, q.end),
         )
+    
+    if q.kind == "count_videos_between":
+        return (
+            "SELECT COUNT(*) FROM videos WHERE video_created_at >= $1 AND video_created_at < $2;",
+            (q.start, q.end),
+        )
 
     if q.kind == "count_videos_gt_final":
         col = METRIC_TO_FINAL[q.metric or "views"]
