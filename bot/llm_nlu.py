@@ -5,20 +5,11 @@ from bot.schema_prompt import build_system_prompt_for_nlu
 from bot.llm_client import gigachat_chat_text
 
 
-MONTHS = {
-    "январ": 1,
-    "феврал": 2,
-    "март": 3,
-    "апрел": 4,
-    "ма": 5,      # май/мая
-    "июн": 6,
-    "июл": 7,
-    "август": 8,
-    "сентябр": 9,
-    "октябр": 10,
-    "ноябр": 11,
-    "декабр": 12,
-}
+MONTH_PATTERNS = [
+    r"январ[ьяе]?", r"феврал[ьяе]?", r"март[ае]?", r"апрел[ьяе]?",
+    r"май|мая|мае", r"июн[ьяе]?", r"июл[ьяе]?", r"август[ае]?",
+    r"сентябр[ьяе]?", r"октябр[ьяе]?", r"ноябр[ьяе]?", r"декабр[ьяе]?",
+]
 
 
 def _extract_json(text: str) -> dict:
@@ -26,48 +17,73 @@ def _extract_json(text: str) -> dict:
     try:
         return json.loads(text)
     except Exception:
-        pass
+        m = re.search(r"\{[\s\S]*\}", text)
+        if not m:
+            raise ValueError("No JSON found in model output")
+        return json.loads(m.group(0))
 
-    m = re.search(r"\{[\s\S]*\}", text)
-    if not m:
-        raise ValueError("No JSON found in model output")
-    return json.loads(m.group(0))
+
+def _question_has_month(text: str) -> bool:
+    t = (text or "").lower()
+    return any(re.search(rf"\b{p}\b", t) for p in MONTH_PATTERNS)
 
 
 def _extract_month_yyyy_mm(question: str) -> str | None:
     t = (question or "").lower()
-    m = re.search(
-        r"(январ[ьяе]?|феврал[ьяе]?|март[ае]?|апрел[ьяе]?|ма[йяе]?|июн[ьяе]?|июл[ьяе]?|август[ае]?|сентябр[ьяе]?|октябр[ьяе]?|ноябр[ьяе]?|декабр[ьяе]?)\s+(\d{4})",
-        t,
-    )
-    if not m:
+    year_m = re.search(r"\b(\d{4})\b", t)
+    if not year_m:
         return None
+    year = int(year_m.group(1))
 
-    mon_word = m.group(1)
-    year = int(m.group(2))
-
-    mon = None
-    for k, v in MONTHS.items():
-        if mon_word.startswith(k):
-            mon = v
+    month_num = None
+    mapping = [
+        (r"январ[ьяе]?", 1),
+        (r"феврал[ьяе]?", 2),
+        (r"март[ае]?", 3),
+        (r"апрел[ьяе]?", 4),
+        (r"май|мая|мае", 5),
+        (r"июн[ьяе]?", 6),
+        (r"июл[ьяе]?", 7),
+        (r"август[ае]?", 8),
+        (r"сентябр[ьяе]?", 9),
+        (r"октябр[ьяе]?", 10),
+        (r"ноябр[ьяе]?", 11),
+        (r"декабр[ьяе]?", 12),
+    ]
+    for pat, mon in mapping:
+        if re.search(rf"\b{pat}\b", t):
+            month_num = mon
             break
-    if mon is None:
+
+    if month_num is None:
         return None
 
-    return f"{year:04d}-{mon:02d}"
+    return f"{year:04d}-{month_num:02d}"
 
 
 async def llm_parse(question: str) -> dict:
     system = build_system_prompt_for_nlu()
     raw = await gigachat_chat_text(system=system, user=question)
-
     data = _extract_json(raw)
 
-    # нормализация: если модель выбрала "за месяц", но month не заполнила
+    q = (question or "").lower()
+
+    if ("сколько" in q and "видео" in q and ("всего" in q or "есть" in q or "в системе" in q)) and not _question_has_month(q):
+        data = {
+            "intent": "total_videos",
+            "metric": None,
+            "threshold": None,
+            "creator_id": None,
+            "date_from": None,
+            "date_to": None,
+            "month": None,
+            "day": None,
+        }
+        return data
+
     if data.get("intent") == "total_videos_in_month":
         month = data.get("month")
         if not month or not re.fullmatch(r"\d{4}-\d{2}", str(month)):
-            fixed = _extract_month_yyyy_mm(question)
-            data["month"] = fixed
+            data["month"] = _extract_month_yyyy_mm(question)
 
     return data
