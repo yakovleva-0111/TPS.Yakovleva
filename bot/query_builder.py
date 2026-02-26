@@ -15,6 +15,10 @@ DELTA_COL = {
 }
 
 
+def _d(s: str) -> date:
+    return date.fromisoformat(s)
+
+
 def build_sql(parsed: dict) -> tuple[str, list]:
     intent = parsed.get("intent")
     metric = parsed.get("metric")
@@ -28,40 +32,37 @@ def build_sql(parsed: dict) -> tuple[str, list]:
         y = int(y)
         m = int(m)
         start = date(y, m, 1)
-        if m == 12:
-            end = date(y + 1, 1, 1)
-        else:
-            end = date(y, m + 1, 1)
+        end = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)
         return (
-            "SELECT COUNT(*) FROM videos WHERE video_created_at >= $1::date AND video_created_at < $2::date;",
-            [start.isoformat(), end.isoformat()],
+            "SELECT COUNT(*) FROM videos WHERE video_created_at >= $1 AND video_created_at < $2;",
+            [start, end],
         )
 
     if intent == "creator_videos_in_range":
         return (
-            "SELECT COUNT(*) FROM videos WHERE creator_id=$1 AND video_created_at >= $2::date AND video_created_at < ($3::date + interval '1 day');",
-            [parsed["creator_id"], parsed["date_from"], parsed["date_to"]],
+            "SELECT COUNT(*) FROM videos "
+            "WHERE creator_id=$1 AND video_created_at >= $2 AND video_created_at < ($3 + interval '1 day');",
+            [parsed["creator_id"], _d(parsed["date_from"]), _d(parsed["date_to"])],
         )
 
     if intent == "videos_over_threshold":
         col = METRIC_COL[metric]
-        return (
-            f"SELECT COUNT(*) FROM videos WHERE {col} > $1;",
-            [parsed["threshold"]],
-        )
+        return (f"SELECT COUNT(*) FROM videos WHERE {col} > $1;", [int(parsed["threshold"])])
 
     if intent == "total_delta_on_day":
         col = DELTA_COL[metric]
         return (
-            f"SELECT COALESCE(SUM({col}),0) FROM video_snapshots WHERE created_at >= $1::date AND created_at < ($1::date + interval '1 day');",
-            [parsed["day"]],
+            f"SELECT COALESCE(SUM({col}),0) FROM video_snapshots "
+            "WHERE created_at >= $1 AND created_at < ($1 + interval '1 day');",
+            [_d(parsed["day"])],
         )
 
     if intent == "distinct_videos_with_new_metric_on_day":
         col = DELTA_COL[metric]
         return (
-            f"SELECT COUNT(DISTINCT video_id) FROM video_snapshots WHERE created_at >= $1::date AND created_at < ($1::date + interval '1 day') AND {col} > 0;",
-            [parsed["day"]],
+            f"SELECT COUNT(DISTINCT video_id) FROM video_snapshots "
+            "WHERE created_at >= $1 AND created_at < ($1 + interval '1 day') AND {col} > 0;",
+            [_d(parsed["day"])],
         )
 
     raise ValueError(f"Unknown intent: {intent}")
