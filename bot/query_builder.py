@@ -28,6 +28,20 @@ def build_sql(parsed: dict) -> tuple[str, list]:
     if intent == "total_metric_sum":
         col = METRIC_COL[metric]
         return (f"SELECT COALESCE(SUM({col}),0) FROM videos;", [])
+    
+    if intent == "total_metric_sum_in_month":
+        if not parsed.get("month"):
+            raise ValueError("month is required for total_metric_sum_in_month")
+
+        col = METRIC_COL[metric]
+        y, m = parsed["month"].split("-")
+        y = int(y); m = int(m)
+        start = date(y, m, 1)
+        end = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)
+        return (
+            f"SELECT COALESCE(SUM({col}),0) FROM videos WHERE video_created_at >= $1 AND video_created_at < $2;",
+            [start, end],
+        )
 
     if intent == "total_videos_in_month":
         if not parsed.get("month"):

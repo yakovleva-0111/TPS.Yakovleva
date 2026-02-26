@@ -5,8 +5,7 @@ def build_system_prompt_for_nlu() -> str:
 
 СХЕМА JSON (все ключи всегда присутствуют):
 {
-  "intent": "total_metric_sum|total_videos_in_month|creator_videos_in_range|videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
-  "metric": "views|likes|comments|reports|null",
+  "intent": "total_videos|total_metric_sum|total_metric_sum_in_month|total_videos_in_month|creator_videos_in_range|videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
   "threshold": number|null,
   "creator_id": "uuid|null",
   "date_from": "YYYY-MM-DD|null",
@@ -29,6 +28,16 @@ def build_system_prompt_for_nlu() -> str:
    Вопрос: "Какое общее количество лайков набрали все видео?"
    Ответ:
    {"intent":"total_metric_sum","metric":"likes","threshold":null,"creator_id":null,"date_from":null,"date_to":null,"month":null,"day":null}
+  
+1b) Если спрашивают сумму метрики по видео, опубликованным в конкретном месяце:
+    Формулировки: "суммарное количество просмотров ... опубликованные в июне 2025", "в июне 2025 года"
+    intent = total_metric_sum_in_month
+    metric = views|likes|comments|reports
+    month = "YYYY-MM"
+    Пример:
+    Вопрос: "Какое суммарное количество просмотров набрали все видео, опубликованные в июне 2025 года?"
+    Ответ:
+    {"intent":"total_metric_sum_in_month","metric":"views","threshold":null,"creator_id":null,"date_from":null,"date_to":null,"month":"2025-06","day":null}
 
 2) Если спрашивают количество видео за месяц:
    Формулировки: "сколько видео ... за май 2025", "за ноябрь 2025"
