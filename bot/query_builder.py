@@ -23,6 +23,12 @@ def build_sql(parsed: dict) -> tuple[str, list]:
     if intent == "total_metric_sum":
         col = METRIC_COL[metric] 
         return (f"SELECT COALESCE(SUM({col}),0) FROM videos;", [])
+    
+    if intent == "videos_in_month":
+        return (
+            "SELECT COUNT(*) FROM videos WHERE video_created_at >= $1::date AND video_created_at < $2::date;",
+            [parsed["date_from"], parsed["date_to_exclusive"]],
+        )
 
     if intent == "creator_videos_in_range":
         return (

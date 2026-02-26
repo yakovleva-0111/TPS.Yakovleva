@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 from bot.ru_dates import parse_ru_day, parse_ru_range
 
@@ -17,6 +18,12 @@ _METRIC = {
     "репортов": "reports",
 }
 
+MONTHS = {
+    "январ": 1, "феврал": 2, "март": 3, "апрел": 4, "ма": 5,
+    "июн": 6, "июл": 7, "август": 8, "сентябр": 9, "октябр": 10,
+    "ноябр": 11, "декабр": 12,
+}
+
 
 def _pick_metric(text: str) -> str | None:
     t = text.lower()
@@ -29,6 +36,32 @@ def _pick_metric(text: str) -> str | None:
 def fallback_parse(question: str) -> dict:
     q = (question or "").strip()
     t = q.lower()
+
+    m = re.search(r"за\s+(январ[ьяе]?|феврал[ьяе]?|март[ае]?|апрел[ьяе]?|ма[йяе]?|июн[ьяе]?|июл[ьяе]?|август[ае]?|сентябр[ьяе]?|октябр[ьяе]?|ноябр[ьяе]?|декабр[ьяе]?)\s+(\d{4})", t)
+    if m and ("сколько" in t and "видео" in t):
+        mon_word = m.group(1)
+        year = int(m.group(2))
+
+        mon = None
+        for k, v in MONTHS.items():
+            if mon_word.startswith(k):
+                mon = v
+                break
+            if mon is None:
+                raise ValueError("month parse failed")
+
+        date_from = date(year, mon, 1).isoformat()
+        if mon == 12:
+            next_month = date(year + 1, 1, 1)
+        else:
+            next_month = date(year, mon + 1, 1)
+        date_to = (next_month).isoformat()
+
+        return {
+            "intent": "videos_in_month",
+            "date_from": date_from,
+            "date_to_exclusive": date_to
+        }
 
     m = re.search(r"(общее количество|всего)\s+(лайков|просмотров|комментариев|репортов|жалоб)", t)
     if m:
