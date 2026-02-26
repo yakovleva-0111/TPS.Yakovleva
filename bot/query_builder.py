@@ -89,6 +89,20 @@ def build_sql(parsed: dict) -> tuple[str, list]:
             f"SELECT COUNT(*) FROM videos WHERE creator_id=$1 AND {col} > $2;",
             [parsed["creator_id"], int(parsed["threshold"])],
         )
+    
+    if intent == "total_delta_first_hours_after_publish":
+        hours = int(parsed.get("hours") or 3)
+        col = DELTA_COL[metric]
+        return (
+            f"""
+            SELECT COALESCE(SUM(vs.{col}),0)
+            FROM video_snapshots vs
+            JOIN videos v ON v.id = vs.video_id
+            WHERE vs.created_at >= v.video_created_at
+            AND vs.created_at < (v.video_created_at + ($1::int * interval '1 hour'));
+            """,
+            [hours],
+        )
 
     if intent == "total_delta_on_day":
         col = DELTA_COL[metric]

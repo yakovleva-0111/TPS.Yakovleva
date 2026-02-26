@@ -68,7 +68,33 @@ async def llm_parse(question: str) -> dict:
 
     q = (question or "").lower()
 
-    q = (question or "").lower()
+    m_hours = re.search(r"первые\s+(\d+)\s+час", q)
+    if "после публикац" in q and "прирост" in q:
+        hours = int(m_hours.group(1)) if m_hours else 3
+
+        if "коммент" in q:
+            metric = "comments"
+        elif "лайк" in q:
+            metric = "likes"
+        elif "просмотр" in q:
+            metric = "views"
+        elif "репорт" in q or "жалоб" in q:
+            metric = "reports"
+        else:
+            metric = None
+
+        if metric:
+             return {
+                "intent": "total_delta_first_hours_after_publish",
+                "metric": metric,
+                "threshold": None,
+                "creator_id": None,
+                "date_from": None,
+                "date_to": None,
+                "month": None,
+                "day": None,
+                "hours": hours,
+            }
 
     if "прирост" in q and _question_has_month(q) and re.search(r"\b\d{4}\b", q):
         if "лайк" in q:

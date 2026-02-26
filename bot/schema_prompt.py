@@ -5,13 +5,14 @@ def build_system_prompt_for_nlu() -> str:
 
 СХЕМА JSON (все ключи всегда присутствуют):
 {
-  "intent": "total_videos|total_metric_sum|total_delta_in_month|total_metric_sum_in_month|total_videos_in_month|total_delta_in_month|creator_videos_in_range|videos_over_threshold|creator_videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
+  "intent": "total_videos|total_metric_sum|total_delta_in_month|total_delta_first_hours_after_publish|total_metric_sum_in_month|total_videos_in_month|total_delta_in_month|creator_videos_in_range|videos_over_threshold|creator_videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
   "threshold": number|null,
   "creator_id": "uuid|null",
   "date_from": "YYYY-MM-DD|null",
   "date_to": "YYYY-MM-DD|null",
   "month": "YYYY-MM|null",
   "day": "YYYY-MM-DD|null"
+  "hours": number|null
 }
 
 БАЗА ДАННЫХ (PostgreSQL):
@@ -75,6 +76,9 @@ def build_system_prompt_for_nlu() -> str:
 
 8) Если спрашивают: "суммарный прирост <метрики> за <месяц> <год>" (например "за ноябрь 2025 года") то
    intent = total_delta_in_month, metric = views|likes|comments|reports, month = "YYYY-MM".
+
+9) “Если спрашивают "за первые 3 часа после публикации каждого” 
+    intent = total_delta_first_hours_after_publish, metric=comments, hours=3
 
 РАСПОЗНАВАНИЕ ДАТ:
 - "28 ноября 2025" => day="2025-11-28"
