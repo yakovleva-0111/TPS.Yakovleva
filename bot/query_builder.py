@@ -28,6 +28,9 @@ def build_sql(parsed: dict) -> tuple[str, list]:
         return (f"SELECT COALESCE(SUM({col}),0) FROM videos;", [])
 
     if intent == "total_videos_in_month":
+        if not parsed.get("month"):
+            raise ValueError("month is required for total_videos_in_month")
+
         y, m = parsed["month"].split("-")
         y = int(y)
         m = int(m)
