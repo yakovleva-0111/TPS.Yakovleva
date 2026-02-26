@@ -1,22 +1,19 @@
 import os
 
-def get_env(name: str, default: str | None = None) -> str:
+def _env(name: str, default: str | None = None) -> str:
     val = os.getenv(name, default)
-    if val is None or val == "":
-        raise RuntimeError(f"Missing env var: {name}")
-    return val
+    return "" if val is None else val
 
-BOT_TOKEN = get_env("BOT_TOKEN")
+BOT_TOKEN = _env("BOT_TOKEN")
 
-DB_HOST = get_env("DB_HOST", "db")
-DB_PORT = int(get_env("DB_PORT", "5432"))
-DB_NAME = get_env("DB_NAME", "tps")
-DB_USER = get_env("DB_USER", "postgres")
-DB_PASSWORD = get_env("DB_PASSWORD", "postgres")
+DB_HOST = _env("DB_HOST", "db")
+DB_PORT = int(_env("DB_PORT", "5432") or 5432)
+DB_NAME = _env("DB_NAME", "tps")
+DB_USER = _env("DB_USER", "postgres")
+DB_PASSWORD = _env("DB_PASSWORD", "postgres")
 DB_DSN = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-#GigaChat
-GIGACHAT_AUTH_KEY = get_env("GIGACHAT_AUTH_KEY")
-GIGACHAT_SCOPE = get_env("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
-GIGACHAT_MODEL = get_env("GIGACHAT_MODEL", "GigaChat")
-GIGACHAT_VERIFY_SSL = get_env("GIGACHAT_VERIFY_SSL", "1") == "1"
+GIGACHAT_AUTH_KEY = _env("GIGACHAT_AUTH_KEY", "")
+GIGACHAT_SCOPE = _env("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
+GIGACHAT_MODEL = _env("GIGACHAT_MODEL", "GigaChat")
+GIGACHAT_VERIFY_SSL = (_env("GIGACHAT_VERIFY_SSL", "1") or "1") == "1"

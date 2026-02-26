@@ -1,60 +1,53 @@
-SCHEMA_TEXT = """
-Ты работаешь с PostgreSQL.
+SCHEMA = """База PostgreSQL содержит две таблицы.
 
-ТАБЛИЦЫ:
+videos
+- id (uuid) — id видео
+- creator_id (uuid) — id креатора
+- video_created_at (timestamptz) — время публикации
+- views_count, likes_count, comments_count, reports_count (bigint) — итоговые значения
 
-1) videos
-- id UUID PK
-- creator_id UUID
-- video_created_at TIMESTAMPTZ
-- views_count BIGINT
-- likes_count BIGINT
-- comments_count BIGINT
-- reports_count BIGINT
-- created_at TIMESTAMPTZ
-- updated_at TIMESTAMPTZ
+video_snapshots
+- id (uuid) — id снапшота
+- video_id (uuid) — ссылка на videos.id
+- views_count, likes_count, comments_count, reports_count (bigint) — значения на момент замера
+- delta_views_count, delta_likes_count, delta_comments_count, delta_reports_count (bigint) — приращения относительно прошлого замера
+- created_at (timestamptz) — время замера (раз в час)
+"""
 
-2) video_snapshots
-- id UUID PK
-- video_id UUID FK -> videos.id
-- views_count BIGINT
-- likes_count BIGINT
-- comments_count BIGINT
-- reports_count BIGINT
-- delta_views_count BIGINT
-- delta_likes_count BIGINT
-- delta_comments_count BIGINT
-- delta_reports_count BIGINT
-- created_at TIMESTAMPTZ
-- updated_at TIMESTAMPTZ
 
-СВЯЗИ:
-- video_snapshots.video_id -> videos.id
+def build_system_prompt_for_nlu() -> str:
+    return f"""Ты распознаёшь пользовательский запрос на русском и возвращаешь JSON с параметрами.
 
-ПРАВИЛА:
-- "всего видео" = COUNT(*) FROM videos
-- "общее количество X" = SUM(videos.<metric_count>)
-  где <metric_count> один из: views_count, likes_count, comments_count, reports_count
-- "прирост X за день D" = SUM(video_snapshots.delta_<metric>_count)
-  WHERE created_at >= D AND created_at < D + interval '1 day'
+СХЕМА ДАННЫХ:
+{SCHEMA}
 
-ВАЖНО: используй только эти таблицы и поля.
-""".strip()
+ДОПУСТИМЫЕ intent:
+- total_videos
+- creator_videos_in_range
+- videos_over_threshold
+- total_delta_on_day
+- distinct_videos_with_new_metric_on_day
 
-def build_system_prompt() -> str:
-    return f"""
-Ты — аналитик SQL. По вопросу пользователя сгенерируй ОДИН SQL-запрос к PostgreSQL.
+ДОПУСТИМЫЕ metric:
+views | likes | comments | reports
 
-ОГРАНИЧЕНИЯ:
-- Разрешён только SELECT. Запрещены INSERT/UPDATE/DELETE/ALTER/DROP/CREATE.
-- Используй ТОЛЬКО таблицы/поля из схемы ниже.
-- Верни ответ СТРОГО JSON:
+ФОРМАТ ОТВЕТА (строго JSON, без текста):
 {{
-  "sql": "...",
-  "reason": "какие таблицы/поля использовал",
-  "assumptions": ["допущения если были"]
+  "intent": "...",
+  "metric": "views|likes|comments|reports|null",
+  "creator_id": "uuid|null",
+  "threshold": 0|null,
+  "date_from": "YYYY-MM-DD|null",
+  "date_to": "YYYY-MM-DD|null",
+  "day": "YYYY-MM-DD|null"
 }}
 
-СХЕМА:
-{SCHEMA_TEXT}
+ПРАВИЛА:
+- "с 1 ноября 2025 по 5 ноября 2025 включительно" => date_from=2025-11-01, date_to=2025-11-05
+- "с 1 по 5 ноября 2025" => date_from=2025-11-01, date_to=2025-11-05
+- "28 ноября 2025" => day=2025-11-28
+- "новые просмотры" => distinct_videos_with_new_metric_on_day (delta > 0)
+- "на сколько ... выросли" => total_delta_on_day (SUM(delta_*))
+
+Верни только JSON.
 """.strip()
