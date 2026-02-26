@@ -5,7 +5,7 @@ def build_system_prompt_for_nlu() -> str:
 
 СХЕМА JSON (все ключи всегда присутствуют):
 {
-  "intent": "total_videos|total_metric_sum|total_metric_sum_in_month|total_videos_in_month|creator_videos_in_range|videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
+  "intent": "total_videos|total_metric_sum|total_metric_sum_in_month|total_videos_in_month|creator_videos_in_range|videos_over_threshold|creator_videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
   "threshold": number|null,
   "creator_id": "uuid|null",
   "date_from": "YYYY-MM-DD|null",
@@ -69,6 +69,9 @@ def build_system_prompt_for_nlu() -> str:
    intent = distinct_videos_with_new_metric_on_day
    metric = ...
    day = YYYY-MM-DD
+
+7) Если спрашивают: "Сколько видео у креатора с id <uuid> набрали больше N <метрики> по итоговой статистике?" то 
+   intent = creator_videos_over_threshold, creator_id = <uuid>, threshold = N, metric = views|likes|comments|reports.
 
 РАСПОЗНАВАНИЕ ДАТ:
 - "28 ноября 2025" => day="2025-11-28"

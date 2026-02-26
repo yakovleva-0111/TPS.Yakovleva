@@ -94,6 +94,36 @@ async def llm_parse(question: str) -> dict:
             }
             return data
 
+    m = re.search(r"id\s+([0-9a-f]{32})", q)
+    t = re.search(r"больше\s+([\d\s]+)", q)
+
+    if ("креатор" in q or "креатора" in q) and m and t and "видео" in q:
+        creator_id = m.group(1)
+        threshold = int(t.group(1).replace(" ", ""))
+
+        if "просмотр" in q:
+            metric = "views"
+        elif "лайк" in q:
+            metric = "likes"
+        elif "коммент" in q:
+            metric = "comments"
+        elif "репорт" in q or "жалоб" in q:
+            metric = "reports"
+        else:
+            metric = None
+
+        if metric:
+            data = {
+                "intent": "creator_videos_over_threshold",
+                "metric": metric,
+                "threshold": threshold,
+                "creator_id": creator_id,
+                "date_from": None,
+                "date_to": None,
+                "month": None,
+                "day": None,
+            }
+            return data
 
     if ("сколько" in q and "видео" in q and ("всего" in q or "есть" in q or "в системе" in q)) and not _question_has_month(q):
         data = {

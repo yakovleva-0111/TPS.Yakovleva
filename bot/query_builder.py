@@ -67,6 +67,13 @@ def build_sql(parsed: dict) -> tuple[str, list]:
     if intent == "videos_over_threshold":
         col = METRIC_COL[metric]
         return (f"SELECT COUNT(*) FROM videos WHERE {col} > $1;", [int(parsed["threshold"])])
+    
+    if intent == "creator_videos_over_threshold":
+        col = METRIC_COL[metric]
+        return (
+            f"SELECT COUNT(*) FROM videos WHERE creator_id=$1 AND {col} > $2;",
+            [parsed["creator_id"], int(parsed["threshold"])],
+        )
 
     if intent == "total_delta_on_day":
         col = DELTA_COL[metric]
