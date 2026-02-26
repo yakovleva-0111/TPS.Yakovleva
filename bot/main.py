@@ -51,7 +51,7 @@ async def run_bot() -> None:
             return
 
         try:
-            parsed = await asyncio.wait_for(llm_parse(question), timeout=8)
+            parsed = await asyncio.wait_for(llm_parse(question), timeout=25)
             sql, args = build_sql(parsed)
 
             conn = await asyncpg.connect(DB_DSN)
