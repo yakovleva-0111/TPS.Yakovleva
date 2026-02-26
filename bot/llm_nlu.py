@@ -124,6 +124,34 @@ async def llm_parse(question: str) -> dict:
                 "day": None,
             }
             return data
+        
+    q = (question or "").lower()
+
+    if ("прирост" in q) and _question_has_month(q) and ("за" in q) and ("год" in q or "года" in q or re.search(r"\b\d{4}\b", q)):
+        if "просмотр" in q:
+            metric = "views"
+        elif "лайк" in q:
+            metric = "likes"
+        elif "коммент" in q:
+            metric = "comments"
+        elif "репорт" in q or "жалоб" in q:
+            metric = "reports"
+        else:
+            metric = None
+
+        month_fixed = _extract_month_yyyy_mm(question)
+        if metric and month_fixed:
+            data = {
+                "intent": "total_delta_in_month",
+                "metric": metric,
+                "threshold": None,
+                "creator_id": None,
+                "date_from": None,
+                "date_to": None,
+                "month": month_fixed,
+                "day": None,
+            }
+            return data
 
     if ("сколько" in q and "видео" in q and ("всего" in q or "есть" in q or "в системе" in q)) and not _question_has_month(q):
         data = {
