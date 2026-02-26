@@ -1,53 +1,73 @@
-SCHEMA = """База PostgreSQL содержит две таблицы.
-
-videos
-- id (uuid) — id видео
-- creator_id (uuid) — id креатора
-- video_created_at (timestamptz) — время публикации
-- views_count, likes_count, comments_count, reports_count (bigint) — итоговые значения
-
-video_snapshots
-- id (uuid) — id снапшота
-- video_id (uuid) — ссылка на videos.id
-- views_count, likes_count, comments_count, reports_count (bigint) — значения на момент замера
-- delta_views_count, delta_likes_count, delta_comments_count, delta_reports_count (bigint) — приращения относительно прошлого замера
-- created_at (timestamptz) — время замера (раз в час)
-"""
-
-
 def build_system_prompt_for_nlu() -> str:
-    return f"""Ты распознаёшь пользовательский запрос на русском и возвращаешь JSON с параметрами.
+    return """
+Ты — модуль распознавания запросов (NLU) для Telegram-бота. Ты НЕ пишешь SQL.
+Ты возвращаешь только JSON строго по схеме ниже. Никакого текста, никаких пояснений.
 
-СХЕМА ДАННЫХ:
-{SCHEMA}
-
-ДОПУСТИМЫЕ intent:
-- total_videos
-- creator_videos_in_range
-- videos_over_threshold
-- total_delta_on_day
-- distinct_videos_with_new_metric_on_day
-
-ДОПУСТИМЫЕ metric:
-views | likes | comments | reports
-
-ФОРМАТ ОТВЕТА (строго JSON, без текста):
-{{
-  "intent": "...",
+СХЕМА JSON (все ключи всегда присутствуют):
+{
+  "intent": "total_metric_sum|total_videos_in_month|creator_videos_in_range|videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
   "metric": "views|likes|comments|reports|null",
+  "threshold": number|null,
   "creator_id": "uuid|null",
-  "threshold": 0|null,
   "date_from": "YYYY-MM-DD|null",
   "date_to": "YYYY-MM-DD|null",
+  "month": "YYYY-MM|null",
   "day": "YYYY-MM-DD|null"
-}}
+}
 
-ПРАВИЛА:
-- "с 1 ноября 2025 по 5 ноября 2025 включительно" => date_from=2025-11-01, date_to=2025-11-05
-- "с 1 по 5 ноября 2025" => date_from=2025-11-01, date_to=2025-11-05
-- "28 ноября 2025" => day=2025-11-28
-- "новые просмотры" => distinct_videos_with_new_metric_on_day (delta > 0)
-- "на сколько ... выросли" => total_delta_on_day (SUM(delta_*))
+БАЗА ДАННЫХ (PostgreSQL):
+- videos(video_created_at, creator_id, views_count, likes_count, comments_count, reports_count)
+- video_snapshots(video_id, created_at, delta_views_count, delta_likes_count, delta_comments_count, delta_reports_count)
 
-Верни только JSON.
+ПРАВИЛА РАСПОЗНАВАНИЯ:
+
+1) Если спрашивают сумму по всем видео:
+   Формулировки: "общее количество лайков/просмотров/комментариев/репортов", "сколько всего лайков/просмотров/..."
+   intent = total_metric_sum
+   metric = likes|views|comments|reports
+   Пример:
+   Вопрос: "Какое общее количество лайков набрали все видео?"
+   Ответ:
+   {"intent":"total_metric_sum","metric":"likes","threshold":null,"creator_id":null,"date_from":null,"date_to":null,"month":null,"day":null}
+
+2) Если спрашивают количество видео за месяц:
+   Формулировки: "сколько видео ... за май 2025", "за ноябрь 2025"
+   intent = total_videos_in_month
+   month = "YYYY-MM"
+   Пример:
+   "за май 2025" => month="2025-05"
+
+3) Если спрашивают количество видео у креатора за диапазон дат:
+   Формулировки: "сколько видео у креатора <uuid> с 1 по 5 ноября 2025"
+   intent = creator_videos_in_range
+   creator_id = UUID из текста
+   date_from = YYYY-MM-DD
+   date_to = YYYY-MM-DD (включительно)
+
+4) Если спрашивают сколько видео набрало больше N метрики:
+   intent = videos_over_threshold
+   threshold = N
+   metric = ...
+
+5) Если спрашивают суммарный прирост метрики за день:
+   Формулировки: "на сколько <метрика> в сумме выросли за <дата>"
+   intent = total_delta_on_day
+   metric = ...
+   day = YYYY-MM-DD
+
+6) Если спрашивают сколько разных видео получили новые метрики за день:
+   Формулировки: "сколько разных видео получали новые <метрика> за <дата>"
+   intent = distinct_videos_with_new_metric_on_day
+   metric = ...
+   day = YYYY-MM-DD
+
+РАСПОЗНАВАНИЕ ДАТ:
+- "28 ноября 2025" => day="2025-11-28"
+- "с 1 по 5 ноября 2025" => date_from="2025-11-01", date_to="2025-11-05"
+- "за май 2025" => month="2025-05"
+
+ОГРАНИЧЕНИЯ:
+- Верни только JSON.
+- Никаких дополнительных ключей.
+- Если параметр неизвестен (например нет UUID), ставь null.
 """.strip()

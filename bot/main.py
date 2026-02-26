@@ -5,13 +5,10 @@ from pathlib import Path
 import asyncpg
 from aiogram import Bot, Dispatcher, types
 
-from bot.config import BOT_TOKEN, DB_DSN, GIGACHAT_AUTH_KEY
-from bot.fallback_nlu import fallback_parse
+from bot.config import BOT_TOKEN, DB_DSN
 from bot.llm_nlu import llm_parse
 from bot.query_builder import build_sql
-from bot.sql_safety import assert_safe_select
-from loader.load_json import ensure_data_loaded
-
+from loader.load_json import load_json
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -36,24 +33,13 @@ async def init_db() -> None:
     conn = await asyncpg.connect(DB_DSN)
     try:
         await conn.execute(SQL_INIT.read_text(encoding="utf-8"))
-        await ensure_data_loaded(conn, DATA_JSON)
+        if DATA_JSON.exists():
+            await load_json(conn, DATA_JSON)
     finally:
         await conn.close()
 
 
-async def _parse_question(question: str) -> dict:
-    if GIGACHAT_AUTH_KEY:
-        try:
-            return await asyncio.wait_for(llm_parse(question), timeout=8)
-        except Exception:
-            return fallback_parse(question)
-    return fallback_parse(question)
-
-
 async def run_bot() -> None:
-    if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN is empty")
-
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
@@ -65,9 +51,8 @@ async def run_bot() -> None:
             return
 
         try:
-            parsed = await _parse_question(question)
+            parsed = await asyncio.wait_for(llm_parse(question), timeout=8)
             sql, args = build_sql(parsed)
-            sql = assert_safe_select(sql)
 
             conn = await asyncpg.connect(DB_DSN)
             try:
@@ -80,6 +65,7 @@ async def run_bot() -> None:
             else:
                 await message.answer(str(int(val)))
         except Exception:
+            logging.exception("handle error")
             await message.answer("0")
 
     await dp.start_polling(bot)
