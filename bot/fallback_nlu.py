@@ -30,6 +30,18 @@ def fallback_parse(question: str) -> dict:
     q = (question or "").strip()
     t = q.lower()
 
+    m = re.search(r"(общее количество|всего)\s+(лайков|просмотров|комментариев|репортов|жалоб)", t)
+    if m:
+        word = m.group(2)
+        metric = {
+            "лайков": "likes",
+            "просмотров": "views",
+            "комментариев": "comments",
+            "репортов": "reports",
+            "жалоб": "reports",
+        }[word]
+        return {"intent": "total_metric_sum", "metric": metric}
+
     if "сколько" in t and "видео" in t and "всего" in t:
         return {
             "intent": "total_videos",

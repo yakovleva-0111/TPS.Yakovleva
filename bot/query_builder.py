@@ -19,6 +19,10 @@ def build_sql(parsed: dict) -> tuple[str, list]:
 
     if intent == "total_videos":
         return "SELECT COUNT(*) FROM videos;", []
+    
+    if intent == "total_metric_sum":
+        col = METRIC_COL[metric] 
+        return (f"SELECT COALESCE(SUM({col}),0) FROM videos;", [])
 
     if intent == "creator_videos_in_range":
         return (
