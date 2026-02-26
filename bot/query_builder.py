@@ -97,6 +97,21 @@ def build_sql(parsed: dict) -> tuple[str, list]:
             "WHERE created_at >= $1 AND created_at < ($1 + interval '1 day');",
             [_d(parsed["day"])],
         )
+    
+    if intent == "total_delta_in_month":
+        if not parsed.get("month"):
+            raise ValueError("month is required for total_delta_in_month")
+
+        col = DELTA_COL[metric]
+        y, m = parsed["month"].split("-")
+        y = int(y)
+        m = int(m)
+        start = date(y, m, 1)
+        end = date(y + 1, 1, 1) if m == 12 else date(y, m + 1, 1)
+        return (
+            f"SELECT COALESCE(SUM({col}),0) FROM video_snapshots WHERE created_at >= $1 AND created_at < $2;",
+            [start, end],
+        )
 
     if intent == "distinct_videos_with_new_metric_on_day":
         col = DELTA_COL[metric]

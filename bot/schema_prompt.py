@@ -5,7 +5,7 @@ def build_system_prompt_for_nlu() -> str:
 
 СХЕМА JSON (все ключи всегда присутствуют):
 {
-  "intent": "total_videos|total_metric_sum|total_metric_sum_in_month|total_videos_in_month|total_delta_in_month|creator_videos_in_range|videos_over_threshold|creator_videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
+  "intent": "total_videos|total_metric_sum|total_delta_in_month|total_metric_sum_in_month|total_videos_in_month|total_delta_in_month|creator_videos_in_range|videos_over_threshold|creator_videos_over_threshold|total_delta_on_day|distinct_videos_with_new_metric_on_day",
   "threshold": number|null,
   "creator_id": "uuid|null",
   "date_from": "YYYY-MM-DD|null",
