@@ -22,6 +22,8 @@ def _d(s: str) -> date:
 def build_sql(parsed: dict) -> tuple[str, list]:
     intent = parsed.get("intent")
     metric = parsed.get("metric")
+    if intent == "total_videos":
+        return ("SELECT COUNT(*) FROM videos;", [])
 
     if intent == "total_metric_sum":
         col = METRIC_COL[metric]
